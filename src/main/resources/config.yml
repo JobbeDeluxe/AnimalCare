@@ -1,0 +1,53 @@
+entities:
+  - COW
+  - SHEEP
+  - PIG
+  - CHICKEN
+  - HORSE
+
+hunger:
+  max: 100
+  captive-loss: 6
+  pasture-change: -1
+  feed-amount: 30
+  interval-ticks: 1200
+  effects:
+    low-threshold: 30
+    starvation-damage: 1.0
+
+pen:
+  detection-radius: 15
+  min-pen-size-xz: 12
+  scan-interval-ticks: 600
+  ignore-blocks:
+    - GRASS
+    - TALL_GRASS
+    - WATER
+
+trough:
+  blocks:
+    - BARREL
+  name-tag: "[Trough]"
+  feed-items:
+    - WHEAT
+    - CARROT
+    - POTATO
+    - BEETROOT
+  radius: 5.0
+  feed-interval-ticks: 200
+  max-feed-per-cycle: 4
+
+feeding:
+  hand-feed-items:
+    - WHEAT
+    - CARROT
+    - POTATO
+    - BEETROOT
+
+messages:
+  feed-success: '&aDu hast %entity% gefüttert. / You fed %entity%.'
+  wrong-item: '&cDieses Item kann nicht gefüttert werden. / This item cannot feed animals.'
+  not-in-pen: '&e%entity% muss in einem Gehege sein. / %entity% must be inside a pen.'
+  not-hungry: '&b%entity% ist bereits satt. / %entity% is already full.'
+  trough-filled: '&aFutter hinzugefügt! / Feed added to trough.'
+  trough-full: '&cDer Trog ist voll. / The trough is full.'

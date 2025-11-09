@@ -1,0 +1,37 @@
+[B]AnimalCare[/B]
+
+[B]=== Features / Funktionen ===[/B]
+[LIST]
+[*]Automatic pen scanning classifies animals as [B]WILD[/B], [B]PASTURE[/B], or [B]CAPTIVE[/B] based on solid blocks within the configurable radius (default 15).
+[*]Persistent hunger system (0–100) stored in the [I]PersistentDataContainer[/I] with configurable loss/regeneration and starvation damage at 0.
+[*]Hand feeding and trough feeding only work for penned animals and trigger breeding once hunger reaches 100.
+[*]Barrel troughs (rename to [COLOR=green][Trough][/COLOR]) consume stored food items and feed nearby animals automatically.
+[*]Bilingual defaults (German/English) plus a GitHub Actions workflow that builds the plugin on every push or pull request.
+[/LIST]
+
+[B]=== Configuration Snippet ===[/B]
+[CODE]
+pen:
+  detection-radius: 15
+  min-pen-size-xz: 12
+hunger:
+  captive-loss: 6
+  pasture-change: -1
+trough:
+  name-tag: "[Trough]"
+  max-feed-per-cycle: 4
+[/CODE]
+
+[B]=== Usage ===[/B]
+[LIST]
+[*]Place or rename a barrel to [Trough] and stock it with allowed feed items (wheat, carrots, potatoes, beetroot).
+[*]Right-click the barrel with more feed to load it; the trough consumes items and restores hunger for nearby animals inside pens.
+[*]Animals in pens smaller than the configured size are treated as CAPTIVE and lose hunger faster than those in large pastures.
+[*]Animals outside any enclosure stay WILD and keep their hunger at 100.
+[/LIST]
+
+[B]=== Build ===[/B]
+[LIST]
+[*][CODE]mvn -B package[/CODE]
+[*]GitHub Actions automatically publishes the jar artifact on push/PR.
+[/LIST]
