@@ -6,6 +6,7 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.Container;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -17,10 +18,17 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.Openable;
+import org.bukkit.block.data.type.Barrel;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 public class TroughManager {
@@ -35,7 +43,10 @@ public class TroughManager {
     private final int maxFeedsPerCycle;
     private final String troughNameTag;
 
+    private static final BlockFace[] HORIZONTAL_FACES = {BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST};
+
     private final Set<Location> activeTroughs = new HashSet<>();
+    private final Map<Location, DoubleBarrelTrough> doubleBarrelTroughs = new HashMap<>();
     private BukkitTask task;
 
     public TroughManager(JavaPlugin plugin, HungerManager hungerManager, PenDetectionService penDetectionService, FileConfiguration config) {
@@ -43,8 +54,8 @@ public class TroughManager {
         this.hungerManager = hungerManager;
         this.penDetectionService = penDetectionService;
         ConfigurationSection troughSection = config.getConfigurationSection("trough");
-        this.troughBlocks = loadMaterials(troughSection != null ? troughSection.getStringList("blocks") : Collections.singletonList("COMPOSTER"));
-        this.feedItems = loadMaterials(troughSection != null ? troughSection.getStringList("feed-items") : Collections.singletonList("WHEAT"));
+        this.troughBlocks = loadMaterials(troughSection != null ? troughSection.getStringList("blocks") : Arrays.asList("BARREL"));
+        this.feedItems = loadMaterials(troughSection != null ? troughSection.getStringList("feed-items") : Arrays.asList("WHEAT", "WHEAT_SEEDS"));
         this.feedRadius = troughSection != null ? troughSection.getDouble("radius", 6.0D) : 6.0D;
         this.feedInterval = troughSection != null ? troughSection.getLong("feed-interval-ticks", 20L * 10L) : 20L * 10L;
         this.maxFeedsPerCycle = troughSection != null ? troughSection.getInt("max-feed-per-cycle", 3) : 3;
@@ -90,11 +101,8 @@ public class TroughManager {
     }
 
     public FillResult handleTroughInteract(Player player, Block block, EquipmentSlot hand) {
-        if (!isTroughBlock(block.getType())) {
-            return FillResult.NOT_TROUGH;
-        }
-        Container container = getContainer(block);
-        if (container == null || !isNamedTrough(container)) {
+        TroughStorage storage = resolveTrough(block);
+        if (storage == null) {
             return FillResult.NOT_TROUGH;
         }
         ItemStack held = player.getInventory().getItem(hand);
@@ -102,9 +110,7 @@ public class TroughManager {
             return FillResult.NOT_FEED_ITEM;
         }
 
-        ItemStack single = held.clone();
-        single.setAmount(1);
-        if (!container.getInventory().addItem(single).isEmpty()) {
+        if (!storage.addFeed(held)) {
             return FillResult.CONTAINER_FULL;
         }
 
@@ -116,35 +122,40 @@ public class TroughManager {
                 held.setAmount(amount);
             }
         }
-        container.update(true, false);
-        Location loc = block.getLocation();
-        activeTroughs.add(loc);
-        feedNearby(loc, container);
+        activeTroughs.add(storage.getKeyLocation());
+        feedNearby(storage);
         return FillResult.ADDED;
     }
 
     public void deactivate(Location location) {
-        activeTroughs.remove(location.getBlock().getLocation());
+        Location key = location.getBlock().getLocation();
+        DoubleBarrelTrough trough = doubleBarrelTroughs.remove(key);
+        if (trough != null) {
+            removeDoubleBarrelTrough(trough);
+            activeTroughs.remove(trough.getKeyLocation());
+            return;
+        }
+        activeTroughs.remove(key);
     }
 
     private void processTroughs() {
         Iterator<Location> iterator = activeTroughs.iterator();
         while (iterator.hasNext()) {
             Location location = iterator.next();
-            Container container = getContainer(location.getBlock());
-            if (container == null || !hasFeed(container)) {
+            TroughStorage storage = resolveTrough(location.getBlock());
+            if (storage == null || !storage.hasFeed()) {
                 iterator.remove();
                 continue;
             }
-            feedNearby(location, container);
-            if (!hasFeed(container)) {
+            feedNearby(storage);
+            if (!storage.hasFeed()) {
                 iterator.remove();
             }
         }
     }
 
-    private void feedNearby(Location center, Container container) {
-        Location middle = center.clone().add(0.5, 0.5, 0.5);
+    private void feedNearby(TroughStorage storage) {
+        Location middle = storage.getCenterLocation();
         if (middle.getWorld() == null) {
             return;
         }
@@ -162,42 +173,12 @@ public class TroughManager {
             if (penDetectionService.getPenStatus(living) == PenDetectionService.PenStatus.WILD) {
                 continue;
             }
-            if (!consumeFeed(container)) {
+            if (!storage.consumeFeed()) {
                 break;
             }
             hungerManager.feedEntity(living);
             fed++;
         }
-    }
-
-    private boolean hasFeed(Container container) {
-        Inventory inventory = container.getInventory();
-        for (ItemStack stack : inventory.getContents()) {
-            if (stack != null && feedItems.contains(stack.getType()) && stack.getAmount() > 0) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean consumeFeed(Container container) {
-        Inventory inventory = container.getInventory();
-        for (int slot = 0; slot < inventory.getSize(); slot++) {
-            ItemStack stack = inventory.getItem(slot);
-            if (stack == null || !feedItems.contains(stack.getType())) {
-                continue;
-            }
-            int newAmount = stack.getAmount() - 1;
-            if (newAmount <= 0) {
-                inventory.setItem(slot, null);
-            } else {
-                stack.setAmount(newAmount);
-                inventory.setItem(slot, stack);
-            }
-            container.update(true, false);
-            return true;
-        }
-        return false;
     }
 
     private boolean isNamedTrough(Container container) {
@@ -210,11 +191,307 @@ public class TroughManager {
         return troughNameTag.equalsIgnoreCase(ChatColor.stripColor(container.getCustomName()));
     }
 
-    private Container getContainer(Block block) {
-        if (!(block.getState() instanceof Container container)) {
+    private TroughStorage resolveTrough(Block block) {
+        if (block == null) {
             return null;
         }
-        return container;
+        if (block.getType() == Material.BARREL) {
+            TroughStorage trough = getDoubleBarrelTrough(block);
+            if (trough != null) {
+                return trough;
+            }
+        }
+        if (block.getState() instanceof Container container) {
+            if (!isNamedTrough(container)) {
+                return null;
+            }
+            return new ContainerTrough(block.getLocation(), container);
+        }
+        return null;
+    }
+
+    private DoubleBarrelTrough getDoubleBarrelTrough(Block block) {
+        Location location = block.getLocation();
+        DoubleBarrelTrough existing = doubleBarrelTroughs.get(location);
+        if (existing != null) {
+            if (existing.isIntact()) {
+                return existing;
+            }
+            removeDoubleBarrelTrough(existing);
+        }
+        Block adjacent = findAdjacentBarrel(block);
+        if (adjacent == null) {
+            return null;
+        }
+        DoubleBarrelTrough trough = createDoubleBarrelTrough(location, adjacent.getLocation());
+        registerDoubleBarrelTrough(trough);
+        return trough;
+    }
+
+    private Block findAdjacentBarrel(Block origin) {
+        Block candidate = null;
+        for (BlockFace face : HORIZONTAL_FACES) {
+            Block relative = origin.getRelative(face);
+            if (relative.getType() != Material.BARREL) {
+                continue;
+            }
+            if (candidate != null) {
+                return null;
+            }
+            candidate = relative;
+        }
+        return candidate;
+    }
+
+    private DoubleBarrelTrough createDoubleBarrelTrough(Location first, Location second) {
+        Location a = first.clone();
+        Location b = second.clone();
+        if (compareLocations(a, b) > 0) {
+            Location temp = a;
+            a = b;
+            b = temp;
+        }
+        return new DoubleBarrelTrough(a, b);
+    }
+
+    private int compareLocations(Location a, Location b) {
+        String worldA = Objects.requireNonNull(a.getWorld()).getName();
+        String worldB = Objects.requireNonNull(b.getWorld()).getName();
+        int result = worldA.compareTo(worldB);
+        if (result != 0) {
+            return result;
+        }
+        result = Integer.compare(a.getBlockX(), b.getBlockX());
+        if (result != 0) {
+            return result;
+        }
+        result = Integer.compare(a.getBlockY(), b.getBlockY());
+        if (result != 0) {
+            return result;
+        }
+        return Integer.compare(a.getBlockZ(), b.getBlockZ());
+    }
+
+    private void registerDoubleBarrelTrough(DoubleBarrelTrough trough) {
+        doubleBarrelTroughs.put(trough.getPrimary(), trough);
+        doubleBarrelTroughs.put(trough.getSecondary(), trough);
+    }
+
+    private void removeDoubleBarrelTrough(DoubleBarrelTrough trough) {
+        doubleBarrelTroughs.remove(trough.getPrimary());
+        doubleBarrelTroughs.remove(trough.getSecondary());
+        trough.close();
+    }
+
+    private interface TroughStorage {
+        Location getKeyLocation();
+
+        Location getCenterLocation();
+
+        boolean addFeed(ItemStack stack);
+
+        boolean hasFeed();
+
+        boolean consumeFeed();
+    }
+
+    private class ContainerTrough implements TroughStorage {
+
+        private final Location location;
+        private final Container container;
+
+        private ContainerTrough(Location location, Container container) {
+            this.location = location.getBlock().getLocation();
+            this.container = container;
+        }
+
+        @Override
+        public Location getKeyLocation() {
+            return location;
+        }
+
+        @Override
+        public Location getCenterLocation() {
+            return location.clone().add(0.5, 0.5, 0.5);
+        }
+
+        @Override
+        public boolean addFeed(ItemStack stack) {
+            ItemStack single = stack.clone();
+            single.setAmount(1);
+            if (!container.getInventory().addItem(single).isEmpty()) {
+                return false;
+            }
+            container.update(true, false);
+            return true;
+        }
+
+        @Override
+        public boolean hasFeed() {
+            Inventory inventory = container.getInventory();
+            for (ItemStack stack : inventory.getContents()) {
+                if (stack != null && feedItems.contains(stack.getType()) && stack.getAmount() > 0) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        @Override
+        public boolean consumeFeed() {
+            Inventory inventory = container.getInventory();
+            for (int slot = 0; slot < inventory.getSize(); slot++) {
+                ItemStack stack = inventory.getItem(slot);
+                if (stack == null || !feedItems.contains(stack.getType())) {
+                    continue;
+                }
+                int newAmount = stack.getAmount() - 1;
+                if (newAmount <= 0) {
+                    inventory.setItem(slot, null);
+                } else {
+                    stack.setAmount(newAmount);
+                    inventory.setItem(slot, stack);
+                }
+                container.update(true, false);
+                return true;
+            }
+            return false;
+        }
+    }
+
+    private static class DoubleBarrelTrough implements TroughStorage {
+
+        private static final int MAX_FEED_ITEMS = 256;
+
+        private final Location primary;
+        private final Location secondary;
+        private final Location center;
+        private final Map<Material, Integer> stored = new HashMap<>();
+
+        private int totalItems = 0;
+
+        private DoubleBarrelTrough(Location primary, Location secondary) {
+            this.primary = primary.getBlock().getLocation();
+            this.secondary = secondary.getBlock().getLocation();
+            this.center = computeCenter(primary, secondary);
+            updateVisualState();
+        }
+
+        private Location computeCenter(Location a, Location b) {
+            double x = (a.getBlockX() + b.getBlockX()) / 2.0 + 0.5;
+            double y = (a.getBlockY() + b.getBlockY()) / 2.0 + 0.5;
+            double z = (a.getBlockZ() + b.getBlockZ()) / 2.0 + 0.5;
+            return new Location(Objects.requireNonNull(a.getWorld()), x, y, z);
+        }
+
+        boolean isIntact() {
+            return isBarrel(primary) && isBarrel(secondary) && areAdjacent(primary, secondary);
+        }
+
+        private boolean isBarrel(Location location) {
+            return location.getWorld() != null && location.getBlock().getType() == Material.BARREL;
+        }
+
+        private boolean areAdjacent(Location first, Location second) {
+            if (!Objects.equals(first.getWorld(), second.getWorld())) {
+                return false;
+            }
+            int dx = Math.abs(first.getBlockX() - second.getBlockX());
+            int dy = Math.abs(first.getBlockY() - second.getBlockY());
+            int dz = Math.abs(first.getBlockZ() - second.getBlockZ());
+            return dy == 0 && ((dx == 1 && dz == 0) || (dz == 1 && dx == 0));
+        }
+
+        Location getPrimary() {
+            return primary;
+        }
+
+        Location getSecondary() {
+            return secondary;
+        }
+
+        @Override
+        public Location getKeyLocation() {
+            return primary;
+        }
+
+        @Override
+        public Location getCenterLocation() {
+            return center.clone();
+        }
+
+        @Override
+        public boolean addFeed(ItemStack stack) {
+            if (totalItems >= MAX_FEED_ITEMS) {
+                return false;
+            }
+            stored.merge(stack.getType(), 1, Integer::sum);
+            totalItems++;
+            updateVisualState();
+            return true;
+        }
+
+        @Override
+        public boolean hasFeed() {
+            return totalItems > 0;
+        }
+
+        @Override
+        public boolean consumeFeed() {
+            if (totalItems <= 0) {
+                return false;
+            }
+            Iterator<Map.Entry<Material, Integer>> iterator = stored.entrySet().iterator();
+            while (iterator.hasNext()) {
+                Map.Entry<Material, Integer> entry = iterator.next();
+                if (entry.getValue() <= 0) {
+                    iterator.remove();
+                    continue;
+                }
+                entry.setValue(entry.getValue() - 1);
+                totalItems--;
+                if (entry.getValue() <= 0) {
+                    iterator.remove();
+                }
+                updateVisualState();
+                return true;
+            }
+            return false;
+        }
+
+        void close() {
+            setBarrelOpen(primary, false);
+            setBarrelOpen(secondary, false);
+        }
+
+        private void updateVisualState() {
+            setBarrelOpen(primary, totalItems > 0);
+            setBarrelOpen(secondary, totalItems > 0);
+        }
+
+        private void setBarrelOpen(Location location, boolean open) {
+            if (location.getWorld() == null) {
+                return;
+            }
+            Block block = location.getBlock();
+            if (block.getType() != Material.BARREL) {
+                return;
+            }
+            BlockData data = block.getBlockData();
+            if (data instanceof Barrel barrelData) {
+                if (barrelData.isOpen() != open) {
+                    barrelData.setOpen(open);
+                    block.setBlockData(barrelData, false);
+                }
+                return;
+            }
+            if (data instanceof Openable openable) {
+                if (openable.isOpen() != open) {
+                    openable.setOpen(open);
+                    block.setBlockData(data, false);
+                }
+            }
+        }
     }
 
     public enum FillResult {

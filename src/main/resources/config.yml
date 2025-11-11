@@ -30,6 +30,7 @@ trough:
   name-tag: "[Trough]"
   feed-items:
     - WHEAT
+    - WHEAT_SEEDS
     - CARROT
     - POTATO
     - BEETROOT
@@ -40,6 +41,7 @@ trough:
 feeding:
   hand-feed-items:
     - WHEAT
+    - WHEAT_SEEDS
     - CARROT
     - POTATO
     - BEETROOT
