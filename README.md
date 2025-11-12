@@ -15,6 +15,9 @@
 ### Configuration
 `src/main/resources/config.yml` contains defaults you can copy to your server's `plugins/AnimalCare/config.yml`:
 
+> 💡 Starting with v1.1.0, the plugin automatically back-fills any missing options when it boots, so existing customised `config.yml`
+> files gain new settings without overwriting your tweaks.
+
 ```
 pen:
   detection-radius: 15
@@ -61,6 +64,9 @@ The shaded plugin jar is produced in `target/`. The included GitHub Action repli
 
 ### Konfiguration
 Die Standardwerte liegen in `src/main/resources/config.yml` und werden beim ersten Start in den Plugin-Ordner kopiert.
+
+> 💡 Seit Version 1.1.0 ergänzt das Plugin beim Start fehlende Einträge automatisch, ohne bestehende Werte zu überschreiben. So
+> landen neue Optionen sicher in deiner angepassten `config.yml`.
 
 - `pen.detection-radius`: Block-Radius für die Wegfindung nach außen (Standard 15).
 - `pen.min-pen-size-xz`: Mindestgröße (Breite/Länge) für eine Weide.

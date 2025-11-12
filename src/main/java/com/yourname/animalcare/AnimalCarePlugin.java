@@ -9,11 +9,17 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
 
 public class AnimalCarePlugin extends JavaPlugin {
 
@@ -25,6 +31,11 @@ public class AnimalCarePlugin extends JavaPlugin {
     public void onEnable() {
         saveDefaultConfig();
         FileConfiguration config = getConfig();
+        if (ensureConfigCompleteness(config)) {
+            saveConfig();
+            reloadConfig();
+            config = getConfig();
+        }
         NamespacedKey hungerKey = new NamespacedKey(this, "hunger");
 
         this.penDetectionService = new PenDetectionService(this, config);
@@ -89,5 +100,31 @@ public class AnimalCarePlugin extends JavaPlugin {
             energies.put(material, value);
         }
         return Collections.unmodifiableMap(energies);
+    }
+
+    private boolean ensureConfigCompleteness(FileConfiguration config) {
+        try (InputStream stream = getResource("config.yml")) {
+            if (stream == null) {
+                getLogger().warning("Default config.yml not found in plugin resources; skipping completeness check.");
+                return false;
+            }
+            try (InputStreamReader reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
+                YamlConfiguration defaults = YamlConfiguration.loadConfiguration(reader);
+                boolean updated = false;
+                for (String key : defaults.getKeys(true)) {
+                    if (key == null || key.isEmpty()) {
+                        continue;
+                    }
+                    if (!config.contains(key)) {
+                        config.set(key, defaults.get(key));
+                        updated = true;
+                    }
+                }
+                return updated;
+            }
+        } catch (IOException ex) {
+            getLogger().log(Level.WARNING, "Failed to verify config completeness.", ex);
+            return false;
+        }
     }
 }

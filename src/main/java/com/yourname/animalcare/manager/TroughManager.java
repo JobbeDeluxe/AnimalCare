@@ -110,14 +110,18 @@ public class TroughManager {
             }
             int newAmount = available - toConsume;
             if (newAmount <= 0) {
-                inventory.setItem(slot, null);
+                inventory.clear(slot);
             } else {
-                stack.setAmount(newAmount);
-                inventory.setItem(slot, stack);
+                ItemStack replacement = stack.clone();
+                replacement.setAmount(newAmount);
+                inventory.setItem(slot, replacement);
             }
             int energyProvided = toConsume * perItem;
             consumedEnergy += energyProvided;
             remaining = Math.max(0, remaining - energyProvided);
+            if (remaining <= 0) {
+                break;
+            }
         }
         return consumedEnergy;
     }
