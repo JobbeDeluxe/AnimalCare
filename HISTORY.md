@@ -15,4 +15,5 @@
 - Filtered non-main-hand interactions to prevent duplicate error messages when feeding animals or using the debug sword.
 - Improved pen classification by flood-filling walkable terrain with configurable vertical tolerance so free-roaming animals stay wild while enclosed pens remain captive or pasture-rated.
 - Ensured trough feeding physically removes items from each paired barrel and keeps inventories in sync after every feeding cycle.
+- Fixed a regression where double-barrel trough inventories appeared unchanged after feeding by avoiding stale barrel snapshots during consumption.
 - Automatically back-fill missing configuration keys on startup so upgraded servers pick up new options without losing custom values.

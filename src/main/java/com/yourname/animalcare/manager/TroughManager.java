@@ -301,7 +301,7 @@ public class TroughManager {
             if (!isNamedTrough(container)) {
                 return null;
             }
-            return new ContainerTrough(block.getLocation(), container);
+            return new ContainerTrough(block.getLocation());
         }
         return null;
     }
@@ -397,11 +397,17 @@ public class TroughManager {
     private class ContainerTrough implements TroughStorage {
 
         private final Location location;
-        private final Container container;
 
-        private ContainerTrough(Location location, Container container) {
+        private ContainerTrough(Location location) {
             this.location = location.getBlock().getLocation();
-            this.container = container;
+        }
+
+        private Container requireContainer() {
+            BlockState state = location.getBlock().getState();
+            if (!(state instanceof Container current) || !isNamedTrough(current)) {
+                return null;
+            }
+            return current;
         }
 
         @Override
@@ -416,18 +422,22 @@ public class TroughManager {
 
         @Override
         public boolean addFeed(ItemStack stack) {
-            ItemStack single = stack.clone();
-            single.setAmount(1);
-            if (!container.getInventory().addItem(single).isEmpty()) {
+            Container current = requireContainer();
+            if (current == null) {
                 return false;
             }
-            container.update(true, false);
-            return true;
+            ItemStack single = stack.clone();
+            single.setAmount(1);
+            return current.getInventory().addItem(single).isEmpty();
         }
 
         @Override
         public boolean hasFeed() {
-            Inventory inventory = container.getInventory();
+            Container current = requireContainer();
+            if (current == null) {
+                return false;
+            }
+            Inventory inventory = current.getInventory();
             for (ItemStack stack : inventory.getContents()) {
                 if (stack != null && isFeedItem(stack.getType()) && stack.getAmount() > 0) {
                     return true;
@@ -441,18 +451,23 @@ public class TroughManager {
             if (requiredEnergy <= 0) {
                 return 0;
             }
-            Inventory inventory = container.getInventory();
-            int consumed = consumeFromInventory(inventory, requiredEnergy);
-            if (consumed > 0) {
-                container.update(true, false);
+            Container current = requireContainer();
+            if (current == null) {
+                return 0;
             }
+            Inventory inventory = current.getInventory();
+            int consumed = consumeFromInventory(inventory, requiredEnergy);
             return consumed;
         }
 
         @Override
         public int getFeedCount() {
             int total = 0;
-            Inventory inventory = container.getInventory();
+            Container current = requireContainer();
+            if (current == null) {
+                return 0;
+            }
+            Inventory inventory = current.getInventory();
             for (ItemStack stack : inventory.getContents()) {
                 if (stack != null && isFeedItem(stack.getType())) {
                     total += stack.getAmount();
@@ -563,7 +578,6 @@ public class TroughManager {
             if (!overflow.isEmpty()) {
                 return false;
             }
-            container.update(true, false);
             ensureOpen();
             return true;
         }
@@ -574,11 +588,7 @@ public class TroughManager {
                 return 0;
             }
             Inventory inventory = container.getInventory();
-            int consumed = consumeFromInventory(inventory, requiredEnergy);
-            if (consumed > 0) {
-                container.update(true, false);
-            }
-            return consumed;
+            return consumeFromInventory(inventory, requiredEnergy);
         }
 
         private Container getContainer(Location location) {
