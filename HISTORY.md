@@ -13,3 +13,4 @@
 - Defaulted the debug tool to a wooden sword and aligned documentation/configuration to match.
 - Added configurable feed energy values so troughs and manual feeding consume the correct number of items to refill animals and visibly deplete barrel inventories.
 - Filtered non-main-hand interactions to prevent duplicate error messages when feeding animals or using the debug sword.
+- Improved pen classification by flood-filling walkable terrain with configurable vertical tolerance so free-roaming animals stay wild while enclosed pens remain captive or pasture-rated.

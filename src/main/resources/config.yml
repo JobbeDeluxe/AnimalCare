@@ -18,6 +18,7 @@ hunger:
 pen:
   detection-radius: 15
   min-pen-size-xz: 12
+  max-vertical-delta: 4
   scan-interval-ticks: 600
   ignore-blocks:
     - GRASS

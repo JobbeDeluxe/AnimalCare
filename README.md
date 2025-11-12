@@ -3,7 +3,7 @@
 ## English
 
 ### Features
-- Automatic pen detection that classifies animals as **WILD**, **PASTURE**, or **CAPTIVE** based on solid boundaries up to the configured radius.
+- Automatic pen detection that classifies animals as **WILD**, **PASTURE**, or **CAPTIVE** by flood-filling available walking space (with configurable vertical tolerance) to distinguish open terrain from enclosed pens.
 - Persistent hunger system stored in each entity's `PersistentDataContainer`, with configurable loss/regeneration per status and starvation effects.
 - Hunger and trough automation only target the entity types listed in the configuration, keeping villagers and other NPCs unaffected by starvation.
 - Feeding gate that blocks manual breeding until animals are fully fed.
@@ -19,6 +19,7 @@
 pen:
   detection-radius: 15
   min-pen-size-xz: 12
+  max-vertical-delta: 4
 hunger:
   captive-loss: 6
   pasture-change: -1
@@ -29,6 +30,7 @@ trough:
   max-feed-per-cycle: 4
 ```
 
+- `pen.max-vertical-delta`: Maximum number of blocks the flood-fill is allowed to climb or drop while searching for an escape route.
 - `debug.enabled`: Toggle the in-game debug stick that reports trough and animal information.
 - `debug.tool`: Material name for the debug sword item (defaults to `WOODEN_SWORD`).
 - `feeding.item-energy`: Per-item hunger value that determines how many stacks a trough (or manual feeding) removes to fill an animal. Lower values (e.g. seeds) require more items than higher-value foods (e.g. carrots).
@@ -48,7 +50,7 @@ The shaded plugin jar is produced in `target/`. The included GitHub Action repli
 ## Deutsch
 
 ### Funktionen
-- Automatische Gehege-Erkennung, die Tiere anhand von festen Grenzen (bis zum konfigurierten Radius) als **WILD**, **WEIDE** oder **GEHEGE** einstuft.
+- Automatische Gehege-Erkennung, die den begehbaren Raum per Flood-Fill (mit einstellbarer Höhen-Toleranz) analysiert und Tiere dadurch zuverlässig als **WILD**, **WEIDE** oder **GEHEGE** einstuft.
 - Hunger-System pro Tier, gespeichert im `PersistentDataContainer`, inklusive einstellbarem Verlust/Regeneration und Verhungern-Schaden.
 - Hunger- und Trog-Automation wirken ausschließlich auf die in der Konfiguration hinterlegten Tierarten; Dorfbewohner und andere NPCs bleiben verschont.
 - Manuelles Füttern blockiert das Züchten, bis ein Tier vollständig satt ist.
@@ -60,8 +62,9 @@ The shaded plugin jar is produced in `target/`. The included GitHub Action repli
 ### Konfiguration
 Die Standardwerte liegen in `src/main/resources/config.yml` und werden beim ersten Start in den Plugin-Ordner kopiert.
 
-- `pen.detection-radius`: Block-Radius für die Suche nach soliden Grenzen (Standard 15).
+- `pen.detection-radius`: Block-Radius für die Wegfindung nach außen (Standard 15).
 - `pen.min-pen-size-xz`: Mindestgröße (Breite/Länge) für eine Weide.
+- `pen.max-vertical-delta`: Maximale Höhenabweichung, die Tiere beim Flood-Fill erklimmen oder herabsteigen dürfen.
 - `hunger.captive-loss` & `hunger.pasture-change`: Hungerverlust bzw. Regeneration pro Intervall.
 - `trough.name-tag`: Name, den ein Fass tragen muss, um als Trog erkannt zu werden.
 - `debug.enabled`: Aktiviert den Debug-Stock zur Anzeige von Trog- und Tierinformationen.
