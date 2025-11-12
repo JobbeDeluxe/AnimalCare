@@ -27,7 +27,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -152,17 +151,33 @@ public class TroughManager {
     }
 
     private void processTroughs() {
-        Iterator<Location> iterator = activeTroughs.iterator();
-        while (iterator.hasNext()) {
-            Location location = iterator.next();
-            TroughStorage storage = resolveTrough(location.getBlock());
-            if (storage == null || !storage.hasFeed()) {
-                iterator.remove();
+        Set<Location> toProcess = new HashSet<>(activeTroughs);
+        for (DoubleBarrelTrough trough : new HashSet<>(doubleBarrelTroughs.values())) {
+            if (trough.hasFeed()) {
+                toProcess.add(trough.getKeyLocation());
+            }
+        }
+
+        for (Location location : toProcess) {
+            Block block = location.getBlock();
+            if (block == null) {
+                activeTroughs.remove(location);
+                continue;
+            }
+            TroughStorage storage = resolveTrough(block);
+            if (storage == null) {
+                activeTroughs.remove(location);
+                continue;
+            }
+            if (!storage.hasFeed()) {
+                activeTroughs.remove(storage.getKeyLocation());
                 continue;
             }
             feedNearby(storage);
-            if (!storage.hasFeed()) {
-                iterator.remove();
+            if (storage.hasFeed()) {
+                activeTroughs.add(storage.getKeyLocation());
+            } else {
+                activeTroughs.remove(storage.getKeyLocation());
             }
         }
         nextFeedRunMillis = System.currentTimeMillis() + ticksToMillis(feedIntervalTicks);

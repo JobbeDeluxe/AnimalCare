@@ -85,6 +85,9 @@ public class HungerManager {
     }
 
     private void applyHungerTick(LivingEntity entity) {
+        if (!isManagedEntity(entity)) {
+            return;
+        }
         PenDetectionService.PenStatus status = penDetectionService.getPenStatus(entity);
         if (status == PenDetectionService.PenStatus.WILD) {
             setHunger(entity, maxHunger);

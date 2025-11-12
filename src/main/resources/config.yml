@@ -40,7 +40,7 @@ trough:
 
 debug:
   enabled: false
-  tool: STICK
+  tool: WOODEN_SWORD
 
 feeding:
   hand-feed-items:

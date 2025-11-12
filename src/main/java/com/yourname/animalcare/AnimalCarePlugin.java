@@ -31,11 +31,11 @@ public class AnimalCarePlugin extends JavaPlugin {
 
         ConfigurationSection debugSection = config.getConfigurationSection("debug");
         boolean debugEnabled = debugSection != null && debugSection.getBoolean("enabled", false);
-        String debugToolName = debugSection != null ? debugSection.getString("tool", "STICK") : "STICK";
-        Material debugTool = Material.matchMaterial(debugToolName == null ? "STICK" : debugToolName.toUpperCase());
+        String debugToolName = debugSection != null ? debugSection.getString("tool", "WOODEN_SWORD") : "WOODEN_SWORD";
+        Material debugTool = Material.matchMaterial(debugToolName == null ? "WOODEN_SWORD" : debugToolName.toUpperCase());
         if (debugTool == null) {
-            getLogger().warning("Unknown debug tool material: " + debugToolName + ". Falling back to STICK.");
-            debugTool = Material.STICK;
+            getLogger().warning("Unknown debug tool material: " + debugToolName + ". Falling back to WOODEN_SWORD.");
+            debugTool = Material.WOODEN_SWORD;
         }
 
         getServer().getPluginManager().registerEvents(

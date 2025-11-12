@@ -196,6 +196,9 @@ public class PenDetectionService {
     }
 
     public PenInfo getPenInfo(LivingEntity entity) {
+        if (!trackedTypes.contains(entity.getType())) {
+            return new PenInfo(PenStatus.WILD, null, 0, 0);
+        }
         PenInfo cached = cachedPenInfo.get(entity.getUniqueId());
         if (cached != null) {
             return cached;
