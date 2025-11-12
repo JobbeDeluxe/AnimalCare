@@ -38,6 +38,10 @@ trough:
   feed-interval-ticks: 200
   max-feed-per-cycle: 4
 
+debug:
+  enabled: false
+  tool: STICK
+
 feeding:
   hand-feed-items:
     - WHEAT

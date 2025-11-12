@@ -5,7 +5,9 @@ import com.yourname.animalcare.listener.TroughListener;
 import com.yourname.animalcare.manager.HungerManager;
 import com.yourname.animalcare.manager.PenDetectionService;
 import com.yourname.animalcare.manager.TroughManager;
+import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -26,7 +28,18 @@ public class AnimalCarePlugin extends JavaPlugin {
         this.troughManager = new TroughManager(this, hungerManager, penDetectionService, config);
 
         getServer().getPluginManager().registerEvents(new FeedListener(config, hungerManager, penDetectionService), this);
-        getServer().getPluginManager().registerEvents(new TroughListener(config, troughManager), this);
+
+        ConfigurationSection debugSection = config.getConfigurationSection("debug");
+        boolean debugEnabled = debugSection != null && debugSection.getBoolean("enabled", false);
+        String debugToolName = debugSection != null ? debugSection.getString("tool", "STICK") : "STICK";
+        Material debugTool = Material.matchMaterial(debugToolName == null ? "STICK" : debugToolName.toUpperCase());
+        if (debugTool == null) {
+            getLogger().warning("Unknown debug tool material: " + debugToolName + ". Falling back to STICK.");
+            debugTool = Material.STICK;
+        }
+
+        getServer().getPluginManager().registerEvents(
+            new TroughListener(config, troughManager, hungerManager, penDetectionService, debugEnabled, debugTool), this);
 
         hungerManager.start();
         penDetectionService.start();
