@@ -11,3 +11,5 @@
 - Hardened hunger processing so only configured animal types are affected, keeping villagers and other NPCs safe even when enclosed.
 - Improved automatic feeding by proactively scanning stocked double-barrel troughs every cycle, so hoppers and manual inventory transfers trigger feeding reliably.
 - Defaulted the debug tool to a wooden sword and aligned documentation/configuration to match.
+- Added configurable feed energy values so troughs and manual feeding consume the correct number of items to refill animals and visibly deplete barrel inventories.
+- Filtered non-main-hand interactions to prevent duplicate error messages when feeding animals or using the debug sword.

@@ -43,6 +43,9 @@ public class TroughListener implements Listener {
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK || event.getClickedBlock() == null) {
             return;
         }
+        if (event.getHand() != EquipmentSlot.HAND) {
+            return;
+        }
         Block block = event.getClickedBlock();
         if (!troughManager.isTroughBlock(block.getType())) {
             return;

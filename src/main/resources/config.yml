@@ -49,6 +49,12 @@ feeding:
     - CARROT
     - POTATO
     - BEETROOT
+  item-energy:
+    WHEAT_SEEDS: 1
+    WHEAT: 3
+    BEETROOT: 4
+    POTATO: 4
+    CARROT: 5
 
 messages:
   feed-success: '&aDu hast %entity% gefüttert. / You fed %entity%.'

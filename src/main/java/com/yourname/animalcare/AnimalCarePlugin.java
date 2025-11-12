@@ -11,6 +11,10 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
 public class AnimalCarePlugin extends JavaPlugin {
 
     private HungerManager hungerManager;
@@ -25,9 +29,11 @@ public class AnimalCarePlugin extends JavaPlugin {
 
         this.penDetectionService = new PenDetectionService(this, config);
         this.hungerManager = new HungerManager(this, hungerKey, config, penDetectionService);
-        this.troughManager = new TroughManager(this, hungerManager, penDetectionService, config);
 
-        getServer().getPluginManager().registerEvents(new FeedListener(config, hungerManager, penDetectionService), this);
+        Map<Material, Integer> feedEnergy = loadFeedEnergy(config);
+        this.troughManager = new TroughManager(this, hungerManager, penDetectionService, config, feedEnergy);
+
+        getServer().getPluginManager().registerEvents(new FeedListener(config, hungerManager, penDetectionService, feedEnergy), this);
 
         ConfigurationSection debugSection = config.getConfigurationSection("debug");
         boolean debugEnabled = debugSection != null && debugSection.getBoolean("enabled", false);
@@ -57,5 +63,31 @@ public class AnimalCarePlugin extends JavaPlugin {
         if (troughManager != null) {
             troughManager.stop();
         }
+    }
+
+    private Map<Material, Integer> loadFeedEnergy(FileConfiguration config) {
+        ConfigurationSection feedingSection = config.getConfigurationSection("feeding");
+        if (feedingSection == null) {
+            return Collections.emptyMap();
+        }
+        ConfigurationSection energySection = feedingSection.getConfigurationSection("item-energy");
+        if (energySection == null) {
+            return Collections.emptyMap();
+        }
+        Map<Material, Integer> energies = new HashMap<>();
+        for (String key : energySection.getKeys(false)) {
+            Material material = Material.matchMaterial(key.toUpperCase());
+            if (material == null) {
+                getLogger().warning("Unknown feed material in feeding.item-energy: " + key);
+                continue;
+            }
+            int value = energySection.getInt(key, 0);
+            if (value <= 0) {
+                getLogger().warning("Feed energy for " + material + " must be positive. Skipping entry.");
+                continue;
+            }
+            energies.put(material, value);
+        }
+        return Collections.unmodifiableMap(energies);
     }
 }

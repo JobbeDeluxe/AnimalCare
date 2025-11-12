@@ -4,6 +4,7 @@ import com.yourname.animalcare.manager.HungerManager;
 import com.yourname.animalcare.manager.PenDetectionService;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
+import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Animals;
 import org.bukkit.entity.LivingEntity;
@@ -14,7 +15,10 @@ import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -24,12 +28,17 @@ public class FeedListener implements Listener {
     private final HungerManager hungerManager;
     private final PenDetectionService penDetectionService;
     private final Set<String> allowedItems;
+    private final Map<Material, Integer> feedEnergy;
 
-    public FeedListener(FileConfiguration config, HungerManager hungerManager, PenDetectionService penDetectionService) {
+    public FeedListener(FileConfiguration config, HungerManager hungerManager, PenDetectionService penDetectionService,
+                       Map<Material, Integer> feedEnergy) {
         this.config = config;
         this.hungerManager = hungerManager;
         this.penDetectionService = penDetectionService;
-        this.allowedItems = new HashSet<>(config.getStringList("feeding.hand-feed-items").stream().map(String::toUpperCase).collect(Collectors.toSet()));
+        this.feedEnergy = Collections.unmodifiableMap(new HashMap<>(feedEnergy));
+        this.allowedItems = new HashSet<>(config.getStringList("feeding.hand-feed-items").stream()
+            .map(String::toUpperCase)
+            .collect(Collectors.toSet()));
         if (this.allowedItems.isEmpty()) {
             this.allowedItems.addAll(config.getStringList("trough.feed-items").stream().map(String::toUpperCase).collect(Collectors.toSet()));
         }
@@ -37,6 +46,9 @@ public class FeedListener implements Listener {
 
     @EventHandler
     public void onEntityFeed(PlayerInteractEntityEvent event) {
+        if (event.getHand() != EquipmentSlot.HAND) {
+            return;
+        }
         if (!(event.getRightClicked() instanceof LivingEntity living)) {
             return;
         }
@@ -47,7 +59,17 @@ public class FeedListener implements Listener {
         Player player = event.getPlayer();
         EquipmentSlot hand = event.getHand();
         ItemStack item = player.getInventory().getItem(hand);
-        if (item == null || !allowedItems.contains(item.getType().name())) {
+        if (item == null) {
+            sendMessage(player, "messages.wrong-item", "%entity%", readableName(living));
+            return;
+        }
+        Material material = item.getType();
+        if (!allowedItems.contains(material.name())) {
+            sendMessage(player, "messages.wrong-item", "%entity%", readableName(living));
+            return;
+        }
+        Integer energy = feedEnergy.get(material);
+        if (energy == null || energy <= 0) {
             sendMessage(player, "messages.wrong-item", "%entity%", readableName(living));
             return;
         }
@@ -60,10 +82,11 @@ public class FeedListener implements Listener {
             sendMessage(player, "messages.not-hungry", "%entity%", readableName(living));
             return;
         }
-        int hunger = hungerManager.feedEntity(living);
+        int hungerBefore = hungerManager.getHunger(living);
+        int hunger = hungerManager.addHunger(living, energy);
         decrementItem(player, hand, item);
         sendMessage(player, "messages.feed-success", "%entity%", readableName(living));
-        if (hunger >= hungerManager.getMaxHunger() && living instanceof Animals animals) {
+        if (hungerBefore < hungerManager.getMaxHunger() && hunger >= hungerManager.getMaxHunger() && living instanceof Animals animals) {
             animals.setLoveModeTicks(600);
             animals.setBreedCause(player.getUniqueId());
         }

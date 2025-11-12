@@ -38,6 +38,7 @@ public class TroughManager {
     private final PenDetectionService penDetectionService;
     private final Set<Material> troughBlocks;
     private final Set<Material> feedItems;
+    private final Map<Material, Integer> feedEnergy;
     private final double feedRadius;
     private final long feedIntervalTicks;
     private final int maxFeedsPerCycle;
@@ -50,18 +51,75 @@ public class TroughManager {
     private BukkitTask task;
     private long nextFeedRunMillis;
 
-    public TroughManager(JavaPlugin plugin, HungerManager hungerManager, PenDetectionService penDetectionService, FileConfiguration config) {
+    public TroughManager(JavaPlugin plugin, HungerManager hungerManager, PenDetectionService penDetectionService,
+                         FileConfiguration config, Map<Material, Integer> feedEnergy) {
         this.plugin = plugin;
         this.hungerManager = hungerManager;
         this.penDetectionService = penDetectionService;
         ConfigurationSection troughSection = config.getConfigurationSection("trough");
         this.troughBlocks = loadMaterials(troughSection != null ? troughSection.getStringList("blocks") : Arrays.asList("BARREL"));
-        this.feedItems = loadMaterials(troughSection != null ? troughSection.getStringList("feed-items") : Arrays.asList("WHEAT", "WHEAT_SEEDS"));
+        this.feedEnergy = Collections.unmodifiableMap(new HashMap<>(feedEnergy));
+        Set<Material> configuredFeedItems = loadMaterials(troughSection != null ? troughSection.getStringList("feed-items") : Collections.emptyList());
+        if (configuredFeedItems.isEmpty() && !this.feedEnergy.isEmpty()) {
+            configuredFeedItems = new HashSet<>(this.feedEnergy.keySet());
+        }
+        Set<Material> validFeedItems = new HashSet<>();
+        for (Material material : configuredFeedItems) {
+            if (!this.feedEnergy.containsKey(material)) {
+                plugin.getLogger().warning("Feed item " + material + " has no configured energy and will be ignored.");
+                continue;
+            }
+            validFeedItems.add(material);
+        }
+        this.feedItems = Collections.unmodifiableSet(validFeedItems);
         this.feedRadius = troughSection != null ? troughSection.getDouble("radius", 6.0D) : 6.0D;
         this.feedIntervalTicks = troughSection != null ? troughSection.getLong("feed-interval-ticks", 20L * 10L) : 20L * 10L;
         this.maxFeedsPerCycle = troughSection != null ? troughSection.getInt("max-feed-per-cycle", 3) : 3;
         this.troughNameTag = troughSection != null ? troughSection.getString("name-tag", "[Trough]") : "[Trough]";
         this.nextFeedRunMillis = System.currentTimeMillis() + ticksToMillis(feedIntervalTicks);
+    }
+
+    private int consumeFromInventory(Inventory inventory, int requiredEnergy) {
+        if (inventory == null || requiredEnergy <= 0) {
+            return 0;
+        }
+        int remaining = requiredEnergy;
+        int consumedEnergy = 0;
+        for (int slot = 0; slot < inventory.getSize() && remaining > 0; slot++) {
+            ItemStack stack = inventory.getItem(slot);
+            if (stack == null) {
+                continue;
+            }
+            Material type = stack.getType();
+            if (!isFeedItem(type)) {
+                continue;
+            }
+            Integer energy = feedEnergy.get(type);
+            if (energy == null || energy <= 0) {
+                continue;
+            }
+            int available = stack.getAmount();
+            if (available <= 0) {
+                continue;
+            }
+            int perItem = energy;
+            int requiredItems = Math.max(1, (remaining + perItem - 1) / perItem);
+            int toConsume = Math.min(available, requiredItems);
+            if (toConsume <= 0) {
+                continue;
+            }
+            int newAmount = available - toConsume;
+            if (newAmount <= 0) {
+                inventory.setItem(slot, null);
+            } else {
+                stack.setAmount(newAmount);
+                inventory.setItem(slot, stack);
+            }
+            int energyProvided = toConsume * perItem;
+            consumedEnergy += energyProvided;
+            remaining = Math.max(0, remaining - energyProvided);
+        }
+        return consumedEnergy;
     }
 
     private Set<Material> loadMaterials(Iterable<String> values) {
@@ -104,7 +162,7 @@ public class TroughManager {
     }
 
     public boolean isFeedItem(Material material) {
-        return feedItems.contains(material);
+        return feedItems.contains(material) && feedEnergy.containsKey(material);
     }
 
     public FillResult handleTroughInteract(Player player, Block block, EquipmentSlot hand) {
@@ -202,10 +260,15 @@ public class TroughManager {
             if (penDetectionService.getPenStatus(living) == PenDetectionService.PenStatus.WILD) {
                 continue;
             }
-            if (!storage.consumeFeed()) {
+            int hungerDeficit = hungerManager.getMaxHunger() - hungerManager.getHunger(living);
+            if (hungerDeficit <= 0) {
+                continue;
+            }
+            int provided = storage.consumeFeed(hungerDeficit);
+            if (provided <= 0) {
                 break;
             }
-            hungerManager.feedEntity(living);
+            hungerManager.addHunger(living, provided);
             fed++;
         }
     }
@@ -322,7 +385,7 @@ public class TroughManager {
 
         boolean hasFeed();
 
-        boolean consumeFeed();
+        int consumeFeed(int requiredEnergy);
 
         int getFeedCount();
     }
@@ -362,7 +425,7 @@ public class TroughManager {
         public boolean hasFeed() {
             Inventory inventory = container.getInventory();
             for (ItemStack stack : inventory.getContents()) {
-                if (stack != null && feedItems.contains(stack.getType()) && stack.getAmount() > 0) {
+                if (stack != null && isFeedItem(stack.getType()) && stack.getAmount() > 0) {
                     return true;
                 }
             }
@@ -370,24 +433,16 @@ public class TroughManager {
         }
 
         @Override
-        public boolean consumeFeed() {
-            Inventory inventory = container.getInventory();
-            for (int slot = 0; slot < inventory.getSize(); slot++) {
-                ItemStack stack = inventory.getItem(slot);
-                if (stack == null || !feedItems.contains(stack.getType())) {
-                    continue;
-                }
-                int newAmount = stack.getAmount() - 1;
-                if (newAmount <= 0) {
-                    inventory.setItem(slot, null);
-                } else {
-                    stack.setAmount(newAmount);
-                    inventory.setItem(slot, stack);
-                }
-                container.update(true, false);
-                return true;
+        public int consumeFeed(int requiredEnergy) {
+            if (requiredEnergy <= 0) {
+                return 0;
             }
-            return false;
+            Inventory inventory = container.getInventory();
+            int consumed = consumeFromInventory(inventory, requiredEnergy);
+            if (consumed > 0) {
+                container.update(true, false);
+            }
+            return consumed;
         }
 
         @Override
@@ -395,7 +450,7 @@ public class TroughManager {
             int total = 0;
             Inventory inventory = container.getInventory();
             for (ItemStack stack : inventory.getContents()) {
-                if (stack != null && feedItems.contains(stack.getType())) {
+                if (stack != null && isFeedItem(stack.getType())) {
                     total += stack.getAmount();
                 }
             }
@@ -475,11 +530,19 @@ public class TroughManager {
         }
 
         @Override
-        public boolean consumeFeed() {
-            if (consumeFromContainer(primary)) {
-                return true;
+        public int consumeFeed(int requiredEnergy) {
+            if (requiredEnergy <= 0) {
+                return 0;
             }
-            return consumeFromContainer(secondary);
+            int consumed = consumeFromContainer(primary, requiredEnergy);
+            int remaining = requiredEnergy - consumed;
+            if (remaining > 0) {
+                consumed += consumeFromContainer(secondary, remaining);
+            }
+            if (consumed > 0) {
+                ensureOpen();
+            }
+            return consumed;
         }
 
         void close() {
@@ -501,29 +564,17 @@ public class TroughManager {
             return true;
         }
 
-        private boolean consumeFromContainer(Location location) {
+        private int consumeFromContainer(Location location, int requiredEnergy) {
             Container container = getContainer(location);
             if (container == null) {
-                return false;
+                return 0;
             }
             Inventory inventory = container.getInventory();
-            for (int slot = 0; slot < inventory.getSize(); slot++) {
-                ItemStack stack = inventory.getItem(slot);
-                if (stack == null || !feedItems.contains(stack.getType())) {
-                    continue;
-                }
-                int newAmount = stack.getAmount() - 1;
-                if (newAmount <= 0) {
-                    inventory.setItem(slot, null);
-                } else {
-                    stack.setAmount(newAmount);
-                    inventory.setItem(slot, stack);
-                }
+            int consumed = consumeFromInventory(inventory, requiredEnergy);
+            if (consumed > 0) {
                 container.update(true, false);
-                ensureOpen();
-                return true;
             }
-            return false;
+            return consumed;
         }
 
         private Container getContainer(Location location) {
@@ -549,7 +600,7 @@ public class TroughManager {
             }
             int total = 0;
             for (ItemStack stack : container.getInventory().getContents()) {
-                if (stack != null && feedItems.contains(stack.getType())) {
+                if (stack != null && isFeedItem(stack.getType())) {
                     total += stack.getAmount();
                 }
             }
