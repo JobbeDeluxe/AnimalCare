@@ -23,6 +23,7 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Openable;
 import org.bukkit.block.data.type.Barrel;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -30,6 +31,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.List;
 
 public class TroughManager {
 
@@ -83,9 +85,17 @@ public class TroughManager {
         if (inventory == null || requiredEnergy <= 0) {
             return 0;
         }
-        int remaining = requiredEnergy;
-        int consumedEnergy = 0;
-        for (int slot = 0; slot < inventory.getSize() && remaining > 0; slot++) {
+        ConsumptionPlan plan = planConsumption(inventory, requiredEnergy);
+        if (plan == null || plan.totalEnergy() <= 0) {
+            return 0;
+        }
+        plan.apply(inventory);
+        return plan.totalEnergy();
+    }
+
+    private ConsumptionPlan planConsumption(Inventory inventory, int requiredEnergy) {
+        List<SlotInfo> slots = new ArrayList<>();
+        for (int slot = 0; slot < inventory.getSize(); slot++) {
             ItemStack stack = inventory.getItem(slot);
             if (stack == null) {
                 continue;
@@ -102,28 +112,98 @@ public class TroughManager {
             if (available <= 0) {
                 continue;
             }
-            int perItem = energy;
-            int requiredItems = Math.max(1, (remaining + perItem - 1) / perItem);
-            int toConsume = Math.min(available, requiredItems);
-            if (toConsume <= 0) {
+            if (energy > requiredEnergy) {
                 continue;
             }
-            int newAmount = available - toConsume;
-            if (newAmount <= 0) {
-                inventory.clear(slot);
-            } else {
-                ItemStack replacement = stack.clone();
-                replacement.setAmount(newAmount);
-                inventory.setItem(slot, replacement);
+            int maxUse = Math.min(available, requiredEnergy / energy);
+            if (maxUse <= 0) {
+                continue;
             }
-            int energyProvided = toConsume * perItem;
-            consumedEnergy += energyProvided;
-            remaining = Math.max(0, remaining - energyProvided);
-            if (remaining <= 0) {
+            slots.add(new SlotInfo(slot, energy, maxUse));
+        }
+        if (slots.isEmpty()) {
+            return null;
+        }
+        int[] previous = new int[requiredEnergy + 1];
+        int[] usedSlot = new int[requiredEnergy + 1];
+        int[] usedCount = new int[requiredEnergy + 1];
+        Arrays.fill(previous, -1);
+        Arrays.fill(usedSlot, -1);
+        Arrays.fill(usedCount, 0);
+        previous[0] = 0;
+
+        for (SlotInfo slot : slots) {
+            for (int energy = requiredEnergy; energy >= 0; energy--) {
+                if (previous[energy] == -1) {
+                    continue;
+                }
+                for (int count = 1; count <= slot.maxUse(); count++) {
+                    int next = energy + count * slot.energy();
+                    if (next > requiredEnergy) {
+                        break;
+                    }
+                    if (previous[next] != -1) {
+                        continue;
+                    }
+                    previous[next] = energy;
+                    usedSlot[next] = slot.index();
+                    usedCount[next] = count;
+                }
+            }
+        }
+
+        int target = 0;
+        for (int energy = requiredEnergy; energy > 0; energy--) {
+            if (previous[energy] != -1) {
+                target = energy;
                 break;
             }
         }
-        return consumedEnergy;
+        if (target <= 0) {
+            return null;
+        }
+
+        Map<Integer, Integer> usage = new HashMap<>();
+        int cursor = target;
+        while (cursor > 0) {
+            int slotIndex = usedSlot[cursor];
+            int count = usedCount[cursor];
+            if (slotIndex < 0 || count <= 0) {
+                break;
+            }
+            usage.merge(slotIndex, count, Integer::sum);
+            cursor = previous[cursor];
+        }
+
+        if (usage.isEmpty()) {
+            return null;
+        }
+
+        return new ConsumptionPlan(usage, target);
+    }
+
+    private record SlotInfo(int index, int energy, int maxUse) {
+    }
+
+    private record ConsumptionPlan(Map<Integer, Integer> slotUsage, int totalEnergy) {
+
+        void apply(Inventory inventory) {
+            for (Map.Entry<Integer, Integer> entry : slotUsage.entrySet()) {
+                ItemStack stack = inventory.getItem(entry.getKey());
+                if (stack == null) {
+                    continue;
+                }
+                int toConsume = entry.getValue();
+                int newAmount = stack.getAmount() - toConsume;
+                if (newAmount <= 0) {
+                    inventory.clear(entry.getKey());
+                } else {
+                    ItemStack replacement = stack.clone();
+                    replacement.setAmount(newAmount);
+                    inventory.setItem(entry.getKey(), replacement);
+                }
+            }
+        }
     }
 
     private Set<Material> loadMaterials(Iterable<String> values) {
