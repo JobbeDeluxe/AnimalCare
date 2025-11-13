@@ -5,7 +5,7 @@
 
     <groupId>com.yourname</groupId>
     <artifactId>animalcare</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
     <name>AnimalCare</name>
     <description>Automated animal care management for Spigot servers.</description>
     <url>https://example.com/animalcare</url>

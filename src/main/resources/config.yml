@@ -18,9 +18,10 @@ hunger:
 pen:
   detection-radius: 15
   min-pen-size-xz: 12
+  max-vertical-delta: 4
   scan-interval-ticks: 600
   ignore-blocks:
-    - GRASS
+    - SHORT_GRASS
     - TALL_GRASS
     - WATER
 
@@ -30,6 +31,7 @@ trough:
   name-tag: "[Trough]"
   feed-items:
     - WHEAT
+    - WHEAT_SEEDS
     - CARROT
     - POTATO
     - BEETROOT
@@ -37,12 +39,23 @@ trough:
   feed-interval-ticks: 200
   max-feed-per-cycle: 4
 
+debug:
+  enabled: false
+  tool: WOODEN_SWORD
+
 feeding:
   hand-feed-items:
     - WHEAT
+    - WHEAT_SEEDS
     - CARROT
     - POTATO
     - BEETROOT
+  item-energy:
+    WHEAT_SEEDS: 5
+    WHEAT: 15
+    BEETROOT: 20
+    POTATO: 20
+    CARROT: 25
 
 messages:
   feed-success: '&aDu hast %entity% gefüttert. / You fed %entity%.'
