@@ -74,6 +74,13 @@ public class TroughManager {
             }
             validFeedItems.add(material);
         }
+        if (validFeedItems.isEmpty() && !this.feedEnergy.isEmpty()) {
+            if (!configuredFeedItems.isEmpty()) {
+                plugin.getLogger().warning("No trough feed items matched configured energy values; "
+                    + "falling back to all configured feedable items.");
+            }
+            validFeedItems.addAll(this.feedEnergy.keySet());
+        }
         this.feedItems = Collections.unmodifiableSet(validFeedItems);
         this.feedRadius = troughSection != null ? troughSection.getDouble("radius", 6.0D) : 6.0D;
         this.feedIntervalTicks = troughSection != null ? troughSection.getLong("feed-interval-ticks", 20L * 10L) : 20L * 10L;
@@ -270,7 +277,10 @@ public class TroughManager {
     }
 
     public boolean isFeedItem(Material material) {
-        return feedItems.contains(material) && feedEnergy.containsKey(material);
+        if (!feedEnergy.containsKey(material)) {
+            return false;
+        }
+        return feedItems.isEmpty() || feedItems.contains(material);
     }
 
     public FillResult handleTroughInteract(Player player, Block block, EquipmentSlot hand) {
