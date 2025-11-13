@@ -1,22 +1,27 @@
-[B]AnimalCare[/B]
+[B]AnimalCare v1.1.0[/B]
 
-[B]=== Features / Funktionen ===[/B]
+[IMG]https://example.com/path/to/your/screenshot.png[/IMG]
+
+[B]=== Feature Overview ===[/B]
 [LIST]
-[*]Automatic pen scanning classifies animals as [B]WILD[/B], [B]PASTURE[/B], or [B]CAPTIVE[/B] based on solid blocks within the configurable radius (default 15).
-[*]Persistent hunger system (0–100) stored in the [I]PersistentDataContainer[/I] with configurable loss/regeneration and starvation damage at 0.
-[*]Hand feeding and trough feeding only work for penned animals and trigger breeding once hunger reaches 100.
-[*]Barrel troughs (rename to [COLOR=green][Trough][/COLOR]) consume stored food items and feed nearby animals automatically.
-[*]Bilingual defaults (German/English) plus a GitHub Actions workflow that builds the plugin on every push or pull request.
+[*]Automatically maps nearby pens and classifies animals as [B]WILD[/B], [B]PASTURE[/B], or [B]CAPTIVE[/B] by flood-filling open walkable space (default radius: 15 blocks, adjustable vertical tolerance).
+[*]Tracks hunger (0–100) for every supported animal via the [I]PersistentDataContainer[/I] with configurable loss/regeneration rates, starvation damage at 0, and breeding locks until animals are fully fed.
+[*]Supports manual feeding, hopper loading, and trough automation that only affects configured entities, keeping villagers and NPCs untouched.
+[*]Recognises renamed barrels as [COLOR=green][Trough][/COLOR], links double-barrel trough pairs, keeps lids open while stocked, and consumes just enough feed based on per-item energy values.
+[*]Ships with bilingual (EN/DE) default messages, an optional debug sword for live diagnostics, and a GitHub Actions workflow that builds on every push or pull request.
 [/LIST]
 
-[B]=== Configuration Snippet ===[/B]
+[B]=== Configuration Snapshot ===[/B]
 [CODE]
 pen:
   detection-radius: 15
   min-pen-size-xz: 12
+  max-vertical-delta: 4
 hunger:
   captive-loss: 6
   pasture-change: -1
+  effects:
+    low-threshold: 30
 trough:
   name-tag: "[Trough]"
   max-feed-per-cycle: 4
@@ -24,14 +29,34 @@ trough:
 
 [B]=== Usage ===[/B]
 [LIST]
-[*]Place or rename a barrel to [Trough] and stock it with allowed feed items (wheat, carrots, potatoes, beetroot).
-[*]Right-click the barrel with more feed to load it; the trough consumes items and restores hunger for nearby animals inside pens.
-[*]Animals in pens smaller than the configured size are treated as CAPTIVE and lose hunger faster than those in large pastures.
-[*]Animals outside any enclosure stay WILD and keep their hunger at 100.
+[*]Place or rename a barrel to "[Trough]" (double-barrel setups are linked automatically) and stock it with approved feed (wheat, seeds, carrots, potatoes, beetroot, or any item with configured energy).
+[*]Right-click the trough to add more food; the automation loop feeds nearby penned animals and updates barrel inventories immediately.
+[*]Small enclosures count as [B]CAPTIVE[/B] and drain hunger faster, large pastures become [B]PASTURE[/B], and animals outside any pen remain [B]WILD[/B] at 100 hunger.
+[*]Enable the optional debug sword in `config.yml` to inspect trough status, detected animals, and next feed cycles in-game.
 [/LIST]
 
-[B]=== Build ===[/B]
+[B]=== Version Highlights ===[/B]
 [LIST]
-[*][CODE]mvn -B package[/CODE]
-[*]GitHub Actions automatically publishes the jar artifact on push/PR.
+[*]v1.1.0 introduces automatic double-barrel trough pairing with live lid animation, reliable hopper/manual feeding triggers, and visible inventory syncing after every cycle.
+[*]Adds wheat seeds as valid feed, honours configured per-item energy so animals eat precisely what they need, and treats every item with an energy value as trough stock.
+[*]Hunger processing now filters for explicitly configured entities, and pen detection accepts legacy `GRASS` while defaulting to modern blocks to avoid startup warnings.
+[*]Existing servers automatically back-fill new configuration keys during upgrades, preserving custom values.
+[/LIST]
+
+[B]=== Compatibility & Requirements ===[/B]
+[LIST]
+[*]Spigot or Paper 1.20+.
+[*]Requires access to the PersistentDataContainer API.
+[*]No external databases required.
+[/LIST]
+
+[B]=== Build & Installation ===[/B]
+[LIST]
+[*]Run [CODE]mvn -B package[/CODE] to build the plugin (GitHub Actions mirrors this on every push/PR).
+[*]Copy the generated jar from [I]target/[/I] into your server's [I]plugins[/I] folder, then restart or use /reload.
+[/LIST]
+
+[B]=== Support & Feedback ===[/B]
+[LIST]
+[*]Report bugs and feature requests via GitHub Issues, including logs, Spigot/Paper version, and configuration excerpts for faster assistance.
 [/LIST]
