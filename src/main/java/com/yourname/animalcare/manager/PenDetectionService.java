@@ -16,6 +16,7 @@ import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -101,13 +102,36 @@ public class PenDetectionService {
         }
         Set<Material> set = new HashSet<>();
         for (String value : values) {
-            try {
-                set.add(Material.valueOf(value.toUpperCase()));
-            } catch (IllegalArgumentException ex) {
+            Material material = resolveMaterial(value);
+            if (material != null) {
+                set.add(material);
+            } else {
                 plugin.getLogger().warning("Unknown material in configuration list: " + value);
             }
         }
         return Collections.unmodifiableSet(set);
+    }
+
+    private Material resolveMaterial(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+
+        Material material = Material.matchMaterial(trimmed, true);
+        if (material != null) {
+            return material;
+        }
+
+        String upper = trimmed.toUpperCase(Locale.ROOT);
+        if ("GRASS".equals(upper)) {
+            return Material.SHORT_GRASS;
+        }
+
+        return Material.matchMaterial(upper);
     }
 
     public void start() {

@@ -34,6 +34,7 @@ trough:
 ```
 
 - `pen.max-vertical-delta`: Maximum number of blocks the flood-fill is allowed to climb or drop while searching for an escape route.
+- `pen.ignore-blocks`: Blocks ignored while checking for escape routes (defaults to `SHORT_GRASS`, `TALL_GRASS`, `WATER`; legacy `GRASS` entries are still accepted).
 - `debug.enabled`: Toggle the in-game debug stick that reports trough and animal information.
 - `debug.tool`: Material name for the debug sword item (defaults to `WOODEN_SWORD`).
 - `feeding.item-energy`: Per-item hunger value that determines how many stacks a trough (or manual feeding) removes to fill an animal. Lower values (e.g. seeds) require more items than higher-value foods (e.g. carrots). Values are interpreted in steps of five (`5 => 1 hunger`, `15 => 3 hunger`, …) so administrators can keep the configuration integral while fine-tuning feed energy.
@@ -71,6 +72,7 @@ Die Standardwerte liegen in `src/main/resources/config.yml` und werden beim erst
 - `pen.detection-radius`: Block-Radius für die Wegfindung nach außen (Standard 15).
 - `pen.min-pen-size-xz`: Mindestgröße (Breite/Länge) für eine Weide.
 - `pen.max-vertical-delta`: Maximale Höhenabweichung, die Tiere beim Flood-Fill erklimmen oder herabsteigen dürfen.
+- `pen.ignore-blocks`: Blöcke, die bei der Wegfindung ignoriert werden (Standard: `SHORT_GRASS`, `TALL_GRASS`, `WATER`; ältere `GRASS`-Einträge funktionieren weiterhin).
 - `hunger.captive-loss` & `hunger.pasture-change`: Hungerverlust bzw. Regeneration pro Intervall.
 - `trough.name-tag`: Name, den ein Fass tragen muss, um als Trog erkannt zu werden.
 - `debug.enabled`: Aktiviert den Debug-Stock zur Anzeige von Trog- und Tierinformationen.

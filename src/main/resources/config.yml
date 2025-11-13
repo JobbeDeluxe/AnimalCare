@@ -21,7 +21,7 @@ pen:
   max-vertical-delta: 4
   scan-interval-ticks: 600
   ignore-blocks:
-    - GRASS
+    - SHORT_GRASS
     - TALL_GRASS
     - WATER
 
