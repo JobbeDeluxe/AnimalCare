@@ -23,7 +23,7 @@ import java.util.logging.Level;
 
 public class AnimalCarePlugin extends JavaPlugin {
 
-    public static final int FEED_ENERGY_SCALE = 5;
+    private static final int FEED_ENERGY_STEP = 5;
 
     private HungerManager hungerManager;
     private PenDetectionService penDetectionService;
@@ -99,18 +99,11 @@ public class AnimalCarePlugin extends JavaPlugin {
                 getLogger().warning("Feed energy for " + material + " must be positive. Skipping entry.");
                 continue;
             }
-            int scaled = value;
-            if (value % FEED_ENERGY_SCALE == 0) {
-                scaled = value / FEED_ENERGY_SCALE;
-            } else {
-                getLogger().warning("Feed energy for " + material + " should be a multiple of " + FEED_ENERGY_SCALE
-                    + ". Using legacy value " + value + ".");
+            if (value % FEED_ENERGY_STEP != 0) {
+                getLogger().warning("Feed energy for " + material + " should be a multiple of " + FEED_ENERGY_STEP
+                    + " to keep hunger math integral. Using configured value " + value + ".");
             }
-            if (scaled <= 0) {
-                getLogger().warning("Feed energy for " + material + " resolves to zero after scaling. Skipping entry.");
-                continue;
-            }
-            energies.put(material, scaled);
+            energies.put(material, value);
         }
         return Collections.unmodifiableMap(energies);
     }

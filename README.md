@@ -37,7 +37,7 @@ trough:
 - `pen.ignore-blocks`: Blocks ignored while checking for escape routes (defaults to `SHORT_GRASS`, `TALL_GRASS`, `WATER`; legacy `GRASS` entries are still accepted).
 - `debug.enabled`: Toggle the in-game debug stick that reports trough and animal information.
 - `debug.tool`: Material name for the debug sword item (defaults to `WOODEN_SWORD`).
-- `feeding.item-energy`: Per-item hunger value that determines how many stacks a trough (or manual feeding) removes to fill an animal. Lower values (e.g. seeds) require more items than higher-value foods (e.g. carrots). Values are interpreted in steps of five (`5 => 1 hunger`, `15 => 3 hunger`, …) so administrators can keep the configuration integral while fine-tuning feed energy.
+- `feeding.item-energy`: Per-item hunger value that determines how many stacks a trough (or manual feeding) removes to fill an animal. Lower values (e.g. seeds) require more items than higher-value foods (e.g. carrots). The configured number is used directly; the bundled defaults stick to multiples of five so hunger math stays integral.
 
 Rename a barrel to `[Trough]`, or place two barrels directly next to one another. Double-barrel troughs pull feed from the visible inventory of both barrels, keep their lids permanently open while the pair is intact, and accept the same approved items (wheat, wheat seeds, carrots, potatoes, beetroot). Simply place food into either barrel to stock the trough; the automation loop consumes those stacks during each feed cycle. Barrel inventories update immediately after animals eat so you can track feed levels at a glance. Pens should be at least 12×12 blocks to count as a pasture; smaller enclosures are treated as captive pens. Enable the optional debug stick in `config.yml` to inspect troughs and animals in-game.
 
@@ -77,7 +77,7 @@ Die Standardwerte liegen in `src/main/resources/config.yml` und werden beim erst
 - `trough.name-tag`: Name, den ein Fass tragen muss, um als Trog erkannt zu werden.
 - `debug.enabled`: Aktiviert den Debug-Stock zur Anzeige von Trog- und Tierinformationen.
 - `debug.tool`: Materialname für das Debug-Schwert (Standard `WOODEN_SWORD`).
-- `feeding.item-energy`: Hungerwert pro Item; bestimmt, wie viele Items ein Trog (oder das manuelle Füttern) entnimmt, um ein Tier wieder auf 100 % zu bringen. Die Werte werden in Fünferschritten interpretiert (`5 => 1 Hunger`, `15 => 3 Hunger` usw.), sodass die Konfiguration ganzzahlige Angaben behält und trotzdem fein abgestimmt werden kann.
+- `feeding.item-energy`: Hungerwert pro Item; bestimmt, wie viele Items ein Trog (oder das manuelle Füttern) entnimmt, um ein Tier wieder auf 100 % zu bringen. Es wird genau der konfigurierte Wert verwendet; die mitgelieferte Konfiguration nutzt Fünfer-Schritte, damit die Berechnung in ganzen Zahlen bleibt.
 
 ### Build
 

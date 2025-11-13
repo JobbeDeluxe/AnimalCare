@@ -17,5 +17,5 @@
 - Ensured trough feeding physically removes items from each paired barrel and keeps inventories in sync after every feeding cycle.
 - Fixed a regression where double-barrel trough inventories appeared unchanged after feeding by avoiding stale barrel snapshots during consumption.
 - Automatically back-fill missing configuration keys on startup so upgraded servers pick up new options without losing custom values.
-- Reworked trough consumption to select the smallest combination of feed items for each animal and updated the default feed energy configuration to use five-point steps so visible inventory changes always match the hunger restored.
+- Reworked trough consumption to select the smallest combination of feed items for each animal and ensured the configured feed energy values are applied exactly, with bundled defaults using five-point steps to keep hunger math integral.
 - Accepted legacy `GRASS` entries in pen ignore lists while defaulting to the modern `SHORT_GRASS` material to eliminate startup warnings.
