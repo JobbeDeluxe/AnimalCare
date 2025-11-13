@@ -19,3 +19,4 @@
 - Automatically back-fill missing configuration keys on startup so upgraded servers pick up new options without losing custom values.
 - Reworked trough consumption to select the smallest combination of feed items for each animal and ensured the configured feed energy values are applied exactly, with bundled defaults using five-point steps to keep hunger math integral.
 - Accepted legacy `GRASS` entries in pen ignore lists while defaulting to the modern `SHORT_GRASS` material to eliminate startup warnings.
+- Treated every item with configured feed energy as valid trough stock so double-barrel debug readouts and automation recognise stored food even when `trough.feed-items` is customised.

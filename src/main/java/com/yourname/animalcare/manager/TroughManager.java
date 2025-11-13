@@ -109,7 +109,7 @@ public class TroughManager {
                 continue;
             }
             Material type = stack.getType();
-            if (!isFeedItem(type)) {
+            if (!isFeedEnergyItem(type)) {
                 continue;
             }
             Integer energy = feedEnergy.get(type);
@@ -281,6 +281,10 @@ public class TroughManager {
             return false;
         }
         return feedItems.isEmpty() || feedItems.contains(material);
+    }
+
+    private boolean isFeedEnergyItem(Material material) {
+        return feedEnergy.containsKey(material);
     }
 
     public FillResult handleTroughInteract(Player player, Block block, EquipmentSlot hand) {
@@ -553,7 +557,7 @@ public class TroughManager {
             }
             Inventory inventory = current.getInventory();
             for (ItemStack stack : inventory.getContents()) {
-                if (stack != null && isFeedItem(stack.getType()) && stack.getAmount() > 0) {
+                if (stack != null && isFeedEnergyItem(stack.getType()) && stack.getAmount() > 0) {
                     return true;
                 }
             }
@@ -583,7 +587,7 @@ public class TroughManager {
             }
             Inventory inventory = current.getInventory();
             for (ItemStack stack : inventory.getContents()) {
-                if (stack != null && isFeedItem(stack.getType())) {
+                if (stack != null && isFeedEnergyItem(stack.getType())) {
                     total += stack.getAmount();
                 }
             }
@@ -728,7 +732,7 @@ public class TroughManager {
             }
             int total = 0;
             for (ItemStack stack : container.getInventory().getContents()) {
-                if (stack != null && isFeedItem(stack.getType())) {
+                if (stack != null && isFeedEnergyItem(stack.getType())) {
                     total += stack.getAmount();
                 }
             }
