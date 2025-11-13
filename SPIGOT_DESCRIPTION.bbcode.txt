@@ -1,5 +1,6 @@
 [B]AnimalCare v1.1.0[/B]
 
+
 Now you have to care for every animal: keepers who lock mobs in tiny pens will watch them starve—AnimalCare makes you feed and house your livestock properly, rewarding open pastures and stocked trough barrels while punishing neglected cages.
 
 [IMG]https://example.com/path/to/your/screenshot.png[/IMG]
