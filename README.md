@@ -2,6 +2,8 @@
 
 ## English
 
+Now you have to care for your animals properly: AnimalCare turns farm mobs into living creatures that need daily attention. Penned animals slowly grow hungry, cramped cages starve them rapidly, and only attentive players with stocked troughs keep their herds alive. Lead your animals into roomy pastures, refill trough barrels, and balance hunger levels if you want healthy breeders and a cruelty-free farm.
+
 ### Features
 - Automatic pen detection that classifies animals as **WILD**, **PASTURE**, or **CAPTIVE** by flood-filling available walking space (with configurable vertical tolerance) to distinguish open terrain from enclosed pens.
 - Persistent hunger system stored in each entity's `PersistentDataContainer`, with configurable loss/regeneration per status and starvation effects.
@@ -52,6 +54,8 @@ The shaded plugin jar is produced in `target/`. The included GitHub Action repli
 ---
 
 ## Deutsch
+
+Jetzt musst du dich wirklich um deine Tiere kümmern: AnimalCare verwandelt sie in Mitbewohner mit echten Bedürfnissen. Eingesperrte Tiere verlieren Hunger, in zu kleinen Käfigen verhungern sie rasch, und nur gefüllte Tröge sowie regelmäßige Pflege halten die Herde am Leben. Schaffe ihnen großzügige Weiden, halte die Fässer gefüllt und gleiche Hungerwerte aus, wenn deine Zucht gesund bleiben soll.
 
 ### Funktionen
 - Automatische Gehege-Erkennung, die den begehbaren Raum per Flood-Fill (mit einstellbarer Höhen-Toleranz) analysiert und Tiere dadurch zuverlässig als **WILD**, **WEIDE** oder **GEHEGE** einstuft.
